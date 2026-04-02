@@ -19,26 +19,21 @@ class Generator(nn.Module):
         self.fc = nn.Linear(latent_size, self.image_resize * self.image_resize * 128)
         
         self.main = nn.Sequential(
-            # input is (128, 7, 7)
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.ConvTranspose2d(128, 128, 5, stride=2, padding=2, output_padding=1),
-            # state size: (128, 14, 14)
             
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.ConvTranspose2d(128, 64, 5, stride=2, padding=2, output_padding=1),
-            # state size: (64, 28, 28)
             
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.ConvTranspose2d(64, 32, 5, stride=1, padding=2),
-            # state size: (32, 28, 28)
             
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.ConvTranspose2d(32, 1, 5, stride=1, padding=2),
-            # state size: (1, 28, 28)
             nn.Sigmoid()
         )
 
@@ -52,22 +47,17 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.main = nn.Sequential(
-            # input is (1, 28, 28)
             nn.LeakyReLU(0.2),
             nn.Conv2d(1, 32, 5, stride=2, padding=2),
-            # state size: (32, 14, 14)
             
             nn.LeakyReLU(0.2),
             nn.Conv2d(32, 64, 5, stride=2, padding=2),
-            # state size: (64, 7, 7)
             
             nn.LeakyReLU(0.2),
             nn.Conv2d(64, 128, 5, stride=2, padding=2),
-            # state size: (128, 4, 4)
             
             nn.LeakyReLU(0.2),
             nn.Conv2d(128, 256, 5, stride=1, padding=2),
-            # state size: (256, 4, 4)
             
             nn.Flatten(),
             nn.Linear(256 * 4 * 4, 1),
@@ -99,7 +89,6 @@ def plot_images(generator, noise_input, device, step=0, model_name="gan_pytorch"
     plt.close('all')
 
 def train():
-    # Parameters
     latent_size = 100
     batch_size = 64
     train_steps = 40000
@@ -107,27 +96,22 @@ def train():
     model_name = "dcgan_mnist_pytorch"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Data loading
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
     dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    # Models
     generator = Generator(latent_size, 28).to(device)
     discriminator = Discriminator().to(device)
 
-    # Optimizers
     optimizer_G = optim.RMSprop(generator.parameters(), lr=lr * 0.5)
     optimizer_D = optim.RMSprop(discriminator.parameters(), lr=lr)
 
     criterion = nn.BCELoss()
 
-    # Fixed noise for visualization
     fixed_noise = torch.randn(16, latent_size).to(device)
     
-    # We'll use a data iterator to handle the steps instead of epochs
     data_iter = iter(dataloader)
     
     for i in range(train_steps):
@@ -165,7 +149,6 @@ def train():
         # -----------------
         optimizer_G.zero_grad()
         
-        # We want the discriminator to think the fake images are real
         output_fake_for_G = discriminator(fake_images)
         loss_G = criterion(output_fake_for_G, real_labels)
         
@@ -178,7 +161,6 @@ def train():
         if (i + 1) % 500 == 0:
             plot_images(generator, fixed_noise, device, step=(i + 1), model_name=model_name)
 
-    # Save models
     torch.save(generator.state_dict(), f"{model_name}_generator.pth")
     torch.save(discriminator.state_dict(), f"{model_name}_discriminator.pth")
 
